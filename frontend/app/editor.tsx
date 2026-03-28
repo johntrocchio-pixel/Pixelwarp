@@ -203,10 +203,10 @@ export default function EditorScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor="#000" />
       
-      {/* FIXED Top Bar - Dark Theme */}
+      {/* FIXED Top Bar - Floating */}
       <View style={styles.topBar}>
         <TouchableOpacity style={styles.topButton} onPress={handleBack}>
           <Ionicons name="arrow-back" size={24} color="#FFF" />
@@ -250,34 +250,32 @@ export default function EditorScreen() {
         </View>
       </View>
 
-      {/* SCROLLABLE Image Canvas - Fixed Container */}
-      <View style={styles.canvasContainer}>
-        <ScrollView
-          ref={scrollViewRef}
-          style={styles.canvasScrollView}
-          contentContainerStyle={styles.canvasContentContainer}
-          showsVerticalScrollIndicator={true}
-          showsHorizontalScrollIndicator={true}
-          scrollEnabled={true}
-          bounces={true}
+      {/* FULL SCREEN Canvas - Behind Everything */}
+      <ScrollView
+        ref={scrollViewRef}
+        style={styles.canvasScrollView}
+        contentContainerStyle={styles.canvasContentContainer}
+        showsVerticalScrollIndicator={true}
+        showsHorizontalScrollIndicator={true}
+        scrollEnabled={true}
+        bounces={true}
+      >
+        <ViewShot
+          ref={viewShotRef}
+          options={{ format: 'jpg', quality: 1.0 }}
+          style={styles.viewShot}
         >
-          <ViewShot
-            ref={viewShotRef}
-            options={{ format: 'jpg', quality: 1.0 }}
-            style={styles.viewShot}
-          >
-            <Image
-              source={{ uri: imageUri }}
-              style={getImageStyle()}
-              resizeMode="contain"
-            />
-          </ViewShot>
-        </ScrollView>
-      </View>
+          <Image
+            source={{ uri: imageUri }}
+            style={getImageStyle()}
+            resizeMode="contain"
+          />
+        </ViewShot>
+      </ScrollView>
 
-      {/* FIXED Bottom UI - Always Visible */}
-      <View style={styles.bottomContainer}>
-        {/* Tool Panel - Shows above tabs when tool selected */}
+      {/* FLOATING Bottom UI - ABSOLUTE POSITION - Always on Top */}
+      <View style={styles.floatingBottomContainer}>
+        {/* Tool Panel - Floats above everything */}
         {selectedTool && (
           <View style={styles.toolPanelContainer}>
             <View style={styles.toolPanelHeader}>
@@ -292,7 +290,7 @@ export default function EditorScreen() {
           </View>
         )}
 
-        {/* Category Tabs - Always visible */}
+        {/* Category Tabs - Floating */}
         <View style={styles.categoryTabs}>
           <TouchableOpacity
             style={[styles.categoryTab, selectedCategory === 'basic' && styles.categoryTabActive]}
@@ -347,7 +345,7 @@ export default function EditorScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* Tool Icons - Always visible */}
+        {/* Tool Icons - Floating */}
         <View style={styles.toolBar}>
           <ScrollView
             horizontal
@@ -386,7 +384,7 @@ export default function EditorScreen() {
           </ScrollView>
         </View>
       </View>
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -394,16 +392,23 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#000',
+    position: 'relative',
   },
   topBar: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 12,
-    paddingVertical: 10,
-    backgroundColor: '#111',
+    paddingTop: 50, // Safe area top
+    paddingBottom: 10,
+    backgroundColor: 'rgba(17, 17, 17, 0.95)',
     borderBottomWidth: 1,
     borderBottomColor: '#00D9FF',
+    zIndex: 100,
   },
   topButton: {
     padding: 8,
@@ -435,27 +440,31 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#00D9FF',
   },
-  canvasContainer: {
-    flex: 1,
-    backgroundColor: '#000',
-  },
   canvasScrollView: {
     flex: 1,
+    backgroundColor: '#000',
   },
   canvasContentContainer: {
     flexGrow: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    minHeight: SCREEN_HEIGHT * 0.5,
+    paddingTop: 100, // Space for top bar
+    paddingBottom: 280, // Space for bottom tools
     padding: 10,
   },
   viewShot: {
     backgroundColor: '#000',
   },
-  bottomContainer: {
-    backgroundColor: '#111',
+  floatingBottomContainer: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: 'rgba(17, 17, 17, 0.95)',
     borderTopWidth: 1,
     borderTopColor: '#222',
+    zIndex: 100,
+    paddingBottom: 30, // Safe area bottom
   },
   toolPanelContainer: {
     maxHeight: SCREEN_HEIGHT * 0.35,
