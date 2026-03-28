@@ -62,9 +62,12 @@ export default function EditorScreen() {
   const imageUri = params.imageUri as string;
   
   const viewShotRef = useRef<ViewShot>(null);
+  const scrollViewRef = useRef<ScrollView>(null);
+  
   const [selectedCategory, setSelectedCategory] = useState<'basic' | 'effects' | 'draw' | 'fun'>('basic');
   const [selectedTool, setSelectedTool] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [imageScale, setImageScale] = useState(1);
 
   // State for all edits
   const [currentFilter, setCurrentFilter] = useState('none');
@@ -122,8 +125,25 @@ export default function EditorScreen() {
     );
   };
 
+  const handleZoomIn = () => {
+    const newScale = Math.min(imageScale + 0.5, 3);
+    setImageScale(newScale);
+  };
+
+  const handleZoomOut = () => {
+    const newScale = Math.max(imageScale - 0.5, 1);
+    setImageScale(newScale);
+  };
+
+  const handleResetZoom = () => {
+    setImageScale(1);
+  };
+
   const getImageStyle = () => {
-    const styles: any = { width: '100%', height: '100%' };
+    const styles: any = { 
+      width: SCREEN_WIDTH * imageScale, 
+      height: SCREEN_WIDTH * imageScale 
+    };
     
     // Apply filter
     if (currentFilter !== 'none') {
@@ -184,9 +204,9 @@ export default function EditorScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="#2c3e50" />
+      <StatusBar barStyle="light-content" backgroundColor="#000" />
       
-      {/* FIXED Top Bar */}
+      {/* FIXED Top Bar - Dark Theme */}
       <View style={styles.topBar}>
         <TouchableOpacity style={styles.topButton} onPress={handleBack}>
           <Ionicons name="arrow-back" size={24} color="#FFF" />
@@ -194,46 +214,80 @@ export default function EditorScreen() {
 
         <Text style={styles.title}>PixelWarp</Text>
 
-        <TouchableOpacity
-          style={[styles.topButton, styles.saveButton]}
-          onPress={handleSave}
-          disabled={isSaving}
-        >
-          {isSaving ? (
-            <ActivityIndicator size="small" color="#FFF" />
-          ) : (
-            <Ionicons name="checkmark" size={28} color="#FFF" />
-          )}
-        </TouchableOpacity>
+        <View style={styles.topRight}>
+          {/* Zoom Controls */}
+          <TouchableOpacity 
+            style={styles.zoomButton} 
+            onPress={handleZoomOut}
+            disabled={imageScale <= 1}
+          >
+            <Ionicons name="remove" size={20} color={imageScale <= 1 ? '#555' : '#FFF'} />
+          </TouchableOpacity>
+          
+          <TouchableOpacity style={styles.zoomButton} onPress={handleResetZoom}>
+            <Text style={styles.zoomText}>{Math.round(imageScale * 100)}%</Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity 
+            style={styles.zoomButton} 
+            onPress={handleZoomIn}
+            disabled={imageScale >= 3}
+          >
+            <Ionicons name="add" size={20} color={imageScale >= 3 ? '#555' : '#FFF'} />
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.topButton, styles.saveButton]}
+            onPress={handleSave}
+            disabled={isSaving}
+          >
+            {isSaving ? (
+              <ActivityIndicator size="small" color="#FFF" />
+            ) : (
+              <Ionicons name="checkmark" size={28} color="#FFF" />
+            )}
+          </TouchableOpacity>
+        </View>
       </View>
 
-      {/* SCROLLABLE Image Canvas - This zooms independently */}
-      <ScrollView
-        style={styles.canvasScrollView}
-        contentContainerStyle={styles.canvasContentContainer}
-        maximumZoomScale={3}
-        minimumZoomScale={1}
-        showsVerticalScrollIndicator={false}
-        showsHorizontalScrollIndicator={false}
-      >
-        <ViewShot
-          ref={viewShotRef}
-          options={{ format: 'jpg', quality: 1.0 }}
-          style={styles.viewShot}
+      {/* SCROLLABLE Image Canvas - Fixed Container */}
+      <View style={styles.canvasContainer}>
+        <ScrollView
+          ref={scrollViewRef}
+          style={styles.canvasScrollView}
+          contentContainerStyle={styles.canvasContentContainer}
+          showsVerticalScrollIndicator={true}
+          showsHorizontalScrollIndicator={true}
+          scrollEnabled={true}
+          bounces={true}
         >
-          <Image
-            source={{ uri: imageUri }}
-            style={getImageStyle()}
-            resizeMode="contain"
-          />
-        </ViewShot>
-      </ScrollView>
+          <ViewShot
+            ref={viewShotRef}
+            options={{ format: 'jpg', quality: 1.0 }}
+            style={styles.viewShot}
+          >
+            <Image
+              source={{ uri: imageUri }}
+              style={getImageStyle()}
+              resizeMode="contain"
+            />
+          </ViewShot>
+        </ScrollView>
+      </View>
 
-      {/* FIXED Bottom UI - Category Tabs, Tools, and Panels */}
+      {/* FIXED Bottom UI - Always Visible */}
       <View style={styles.bottomContainer}>
         {/* Tool Panel - Shows above tabs when tool selected */}
         {selectedTool && (
           <View style={styles.toolPanelContainer}>
+            <View style={styles.toolPanelHeader}>
+              <Text style={styles.toolPanelTitle}>
+                {toolCategories[selectedCategory].find(t => t.id === selectedTool)?.label}
+              </Text>
+              <TouchableOpacity onPress={() => setSelectedTool(null)}>
+                <Ionicons name="close" size={24} color="#999" />
+              </TouchableOpacity>
+            </View>
             {renderToolPanel()}
           </View>
         )}
@@ -247,7 +301,7 @@ export default function EditorScreen() {
               setSelectedTool(null);
             }}
           >
-            <Ionicons name="hammer" size={20} color={selectedCategory === 'basic' ? '#3498db' : '#95a5a6'} />
+            <Ionicons name="hammer" size={18} color={selectedCategory === 'basic' ? '#00D9FF' : '#666'} />
             <Text style={[styles.categoryLabel, selectedCategory === 'basic' && styles.categoryLabelActive]}>
               Basic
             </Text>
@@ -260,7 +314,7 @@ export default function EditorScreen() {
               setSelectedTool(null);
             }}
           >
-            <Ionicons name="color-wand" size={20} color={selectedCategory === 'effects' ? '#3498db' : '#95a5a6'} />
+            <Ionicons name="color-wand" size={18} color={selectedCategory === 'effects' ? '#00D9FF' : '#666'} />
             <Text style={[styles.categoryLabel, selectedCategory === 'effects' && styles.categoryLabelActive]}>
               Effects
             </Text>
@@ -273,7 +327,7 @@ export default function EditorScreen() {
               setSelectedTool(null);
             }}
           >
-            <Ionicons name="create" size={20} color={selectedCategory === 'draw' ? '#3498db' : '#95a5a6'} />
+            <Ionicons name="create" size={18} color={selectedCategory === 'draw' ? '#00D9FF' : '#666'} />
             <Text style={[styles.categoryLabel, selectedCategory === 'draw' && styles.categoryLabelActive]}>
               Draw
             </Text>
@@ -286,7 +340,7 @@ export default function EditorScreen() {
               setSelectedTool(null);
             }}
           >
-            <Ionicons name="happy" size={20} color={selectedCategory === 'fun' ? '#3498db' : '#95a5a6'} />
+            <Ionicons name="happy" size={18} color={selectedCategory === 'fun' ? '#00D9FF' : '#666'} />
             <Text style={[styles.categoryLabel, selectedCategory === 'fun' && styles.categoryLabelActive]}>
               Fun
             </Text>
@@ -315,8 +369,8 @@ export default function EditorScreen() {
                 ]}>
                   <Ionicons
                     name={tool.icon as any}
-                    size={28}
-                    color={selectedTool === tool.id ? '#3498db' : '#ecf0f1'}
+                    size={26}
+                    color={selectedTool === tool.id ? '#00D9FF' : '#CCC'}
                   />
                 </View>
                 <Text
@@ -339,7 +393,7 @@ export default function EditorScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#34495e',
+    backgroundColor: '#000',
   },
   topBar: {
     flexDirection: 'row',
@@ -347,49 +401,85 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 12,
     paddingVertical: 10,
-    backgroundColor: '#2c3e50',
+    backgroundColor: '#111',
     borderBottomWidth: 1,
-    borderBottomColor: '#3498db',
+    borderBottomColor: '#00D9FF',
   },
   topButton: {
     padding: 8,
-    minWidth: 48,
+    minWidth: 40,
+  },
+  topRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  zoomButton: {
+    padding: 6,
+    minWidth: 36,
+    alignItems: 'center',
+  },
+  zoomText: {
+    color: '#FFF',
+    fontSize: 12,
+    fontWeight: '600',
   },
   saveButton: {
-    backgroundColor: '#27ae60',
+    backgroundColor: '#00D900',
     borderRadius: 6,
     paddingHorizontal: 12,
+    marginLeft: 8,
   },
   title: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#3498db',
+    color: '#00D9FF',
+  },
+  canvasContainer: {
+    flex: 1,
+    backgroundColor: '#000',
   },
   canvasScrollView: {
     flex: 1,
-    backgroundColor: '#2c3e50',
   },
   canvasContentContainer: {
     flexGrow: 1,
     justifyContent: 'center',
     alignItems: 'center',
     minHeight: SCREEN_HEIGHT * 0.5,
+    padding: 10,
   },
   viewShot: {
-    width: SCREEN_WIDTH,
-    height: SCREEN_WIDTH,
+    backgroundColor: '#000',
   },
   bottomContainer: {
-    backgroundColor: '#2c3e50',
+    backgroundColor: '#111',
+    borderTopWidth: 1,
+    borderTopColor: '#222',
   },
   toolPanelContainer: {
     maxHeight: SCREEN_HEIGHT * 0.35,
+    borderTopWidth: 1,
+    borderTopColor: '#00D9FF',
+  },
+  toolPanelHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: '#1a1a1a',
+    borderBottomWidth: 1,
+    borderBottomColor: '#222',
+  },
+  toolPanelTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#00D9FF',
   },
   categoryTabs: {
     flexDirection: 'row',
-    backgroundColor: '#2c3e50',
-    borderTopWidth: 1,
-    borderTopColor: '#34495e',
+    backgroundColor: '#111',
   },
   categoryTab: {
     flex: 1,
@@ -399,22 +489,20 @@ const styles = StyleSheet.create({
     borderBottomColor: 'transparent',
   },
   categoryTabActive: {
-    borderBottomColor: '#3498db',
+    borderBottomColor: '#00D9FF',
   },
   categoryLabel: {
     fontSize: 11,
-    color: '#95a5a6',
+    color: '#666',
     marginTop: 4,
   },
   categoryLabelActive: {
-    color: '#3498db',
+    color: '#00D9FF',
     fontWeight: '600',
   },
   toolBar: {
-    backgroundColor: '#34495e',
+    backgroundColor: '#1a1a1a',
     paddingVertical: 12,
-    borderTopWidth: 1,
-    borderTopColor: '#2c3e50',
   },
   toolList: {
     paddingHorizontal: 8,
@@ -431,24 +519,24 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 8,
-    backgroundColor: '#2c3e50',
+    backgroundColor: '#222',
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 2,
-    borderColor: '#34495e',
+    borderColor: '#333',
   },
   toolIconActive: {
-    borderColor: '#3498db',
-    backgroundColor: '#34495e',
+    borderColor: '#00D9FF',
+    backgroundColor: '#1a1a1a',
   },
   toolLabel: {
     fontSize: 11,
-    color: '#95a5a6',
+    color: '#666',
     marginTop: 6,
     textAlign: 'center',
   },
   toolLabelActive: {
-    color: '#3498db',
+    color: '#00D9FF',
     fontWeight: '600',
   },
 });

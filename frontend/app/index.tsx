@@ -17,7 +17,6 @@ export default function HomeScreen() {
   const [hasPermission, setHasPermission] = useState<boolean | null>(null);
 
   useEffect(() => {
-    // Auto-request permissions on mount
     requestPermissions();
   }, []);
 
@@ -100,17 +99,17 @@ export default function HomeScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="#2c3e50" />
+      <StatusBar barStyle="light-content" backgroundColor="#000" />
       
       {/* Header */}
       <View style={styles.header}>
         <Text style={styles.appName}>PixelWarp</Text>
-        <Text style={styles.tagline}>Photo Editor</Text>
+        <Text style={styles.tagline}>Professional Photo Editor</Text>
       </View>
 
       {/* Main Content */}
       <View style={styles.content}>
-        <Ionicons name="images" size={120} color="#3498db" />
+        <Ionicons name="images" size={120} color="#00D9FF" />
         
         <Text style={styles.instruction}>Select a photo to start editing</Text>
 
@@ -145,24 +144,24 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#34495e',
+    backgroundColor: '#000',
   },
   header: {
     alignItems: 'center',
     paddingVertical: 30,
-    backgroundColor: '#2c3e50',
+    backgroundColor: '#111',
     borderBottomWidth: 2,
-    borderBottomColor: '#3498db',
+    borderBottomColor: '#00D9FF',
   },
   appName: {
     fontSize: 42,
     fontWeight: 'bold',
-    color: '#3498db',
+    color: '#00D9FF',
     letterSpacing: 1,
   },
   tagline: {
     fontSize: 16,
-    color: '#95a5a6',
+    color: '#888',
     marginTop: 4,
   },
   content: {
@@ -173,7 +172,7 @@ const styles = StyleSheet.create({
   },
   instruction: {
     fontSize: 18,
-    color: '#ecf0f1',
+    color: '#CCC',
     marginTop: 24,
     marginBottom: 40,
     textAlign: 'center',
@@ -191,15 +190,15 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   primaryButton: {
-    backgroundColor: '#3498db',
+    backgroundColor: '#00D9FF',
   },
   secondaryButton: {
-    backgroundColor: '#27ae60',
+    backgroundColor: '#00D900',
   },
   buttonText: {
-    color: '#FFF',
+    color: '#000',
     fontSize: 18,
-    fontWeight: '600',
+    fontWeight: '700',
   },
   footer: {
     padding: 16,
@@ -207,6 +206,6 @@ const styles = StyleSheet.create({
   },
   footerText: {
     fontSize: 12,
-    color: '#95a5a6',
+    color: '#555',
   },
 });

@@ -82,7 +82,7 @@ export default function AdjustTool({ onAdjust }: AdjustToolProps) {
 const styles = StyleSheet.create({
   container: {
     padding: 16,
-    backgroundColor: '#2c3e50',
+    backgroundColor: '#111',
   },
   control: {
     marginBottom: 16,
@@ -96,12 +96,12 @@ const styles = StyleSheet.create({
   label: {
     flex: 1,
     fontSize: 14,
-    color: '#ecf0f1',
+    color: '#FFF',
     fontWeight: '600',
   },
   value: {
     fontSize: 14,
-    color: '#95a5a6',
+    color: '#00D9FF',
   },
   slider: {
     width: '100%',

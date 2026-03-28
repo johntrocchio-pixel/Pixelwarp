@@ -51,7 +51,7 @@ export default function FilterTool({ currentFilter, onFilterChange }: FilterTool
 const styles = StyleSheet.create({
   container: {
     paddingVertical: 16,
-    backgroundColor: '#2c3e50',
+    backgroundColor: '#111',
   },
   filterList: {
     paddingHorizontal: 16,
@@ -68,23 +68,23 @@ const styles = StyleSheet.create({
     width: 60,
     height: 60,
     borderRadius: 8,
-    backgroundColor: '#34495e',
+    backgroundColor: '#222',
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 2,
-    borderColor: '#34495e',
+    borderColor: '#333',
   },
   filterIconActive: {
-    borderColor: '#3498db',
+    borderColor: '#00D9FF',
   },
   filterName: {
     fontSize: 11,
-    color: '#95a5a6',
+    color: '#888',
     marginTop: 6,
     textAlign: 'center',
   },
   filterNameActive: {
-    color: '#3498db',
+    color: '#00D9FF',
     fontWeight: '600',
   },
 });
