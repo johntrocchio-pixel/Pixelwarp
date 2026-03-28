@@ -1,15 +1,19 @@
 {
   "expo": {
-    "name": "frontend",
-    "slug": "frontend",
+    "name": "PixelWarp",
+    "slug": "pixelwarp",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "frontend",
-    "userInterfaceStyle": "automatic",
+    "scheme": "pixelwarp",
+    "userInterfaceStyle": "dark",
     "newArchEnabled": true,
+    "description": "Professional photo editor with 16 editing tools - PicSay Pro for modern phones",
+    "primaryColor": "#00D9FF",
     "ios": {
       "supportsTablet": true,
+      "bundleIdentifier": "com.pixelwarp.app",
+      "buildNumber": "1.0.0",
       "infoPlist": {
         "NSPhotoLibraryUsageDescription": "Select photos to edit",
         "NSCameraUsageDescription": "Capture photos to edit",
@@ -17,6 +21,8 @@
       }
     },
     "android": {
+      "package": "com.pixelwarp.app",
+      "versionCode": 1,
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#000"
