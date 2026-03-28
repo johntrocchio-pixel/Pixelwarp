@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -16,6 +16,11 @@ import { Ionicons } from '@expo/vector-icons';
 export default function HomeScreen() {
   const [hasPermission, setHasPermission] = useState<boolean | null>(null);
 
+  useEffect(() => {
+    // Auto-request permissions on mount
+    requestPermissions();
+  }, []);
+
   const requestPermissions = async () => {
     const cameraPermission = await ImagePicker.requestCameraPermissionsAsync();
     const mediaLibraryPermission = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -23,7 +28,7 @@ export default function HomeScreen() {
     if (cameraPermission.status !== 'granted' || mediaLibraryPermission.status !== 'granted') {
       Alert.alert(
         'Permissions Required',
-        'Camera and photo library access are needed to edit photos.',
+        'PixelWarp needs camera and photo access to edit images.',
         [{ text: 'OK' }]
       );
       setHasPermission(false);
@@ -95,143 +100,113 @@ export default function HomeScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="light-content" />
+      <StatusBar barStyle="light-content" backgroundColor="#2c3e50" />
+      
+      {/* Header */}
+      <View style={styles.header}>
+        <Text style={styles.appName}>PixelWarp</Text>
+        <Text style={styles.tagline}>Photo Editor</Text>
+      </View>
+
+      {/* Main Content */}
       <View style={styles.content}>
-        {/* Header */}
-        <View style={styles.header}>
-          <Ionicons name="images" size={80} color="#FF6B6B" />
-          <Text style={styles.title}>PicSay Pro</Text>
-          <Text style={styles.subtitle}>Professional Photo Editor</Text>
-        </View>
+        <Ionicons name="images" size={120} color="#3498db" />
+        
+        <Text style={styles.instruction}>Select a photo to start editing</Text>
 
         {/* Action Buttons */}
-        <View style={styles.buttonContainer}>
-          <TouchableOpacity
-            style={styles.primaryButton}
-            onPress={pickImageFromGallery}
-            activeOpacity={0.8}
-          >
-            <Ionicons name="images-outline" size={32} color="#FFF" />
-            <Text style={styles.buttonText}>Choose from Gallery</Text>
-          </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.button, styles.primaryButton]}
+          onPress={pickImageFromGallery}
+          activeOpacity={0.8}
+        >
+          <Ionicons name="images-outline" size={24} color="#FFF" />
+          <Text style={styles.buttonText}>Choose Photo</Text>
+        </TouchableOpacity>
 
-          <TouchableOpacity
-            style={styles.secondaryButton}
-            onPress={takePhoto}
-            activeOpacity={0.8}
-          >
-            <Ionicons name="camera-outline" size={32} color="#FFF" />
-            <Text style={styles.buttonText}>Take Photo</Text>
-          </TouchableOpacity>
-        </View>
+        <TouchableOpacity
+          style={[styles.button, styles.secondaryButton]}
+          onPress={takePhoto}
+          activeOpacity={0.8}
+        >
+          <Ionicons name="camera-outline" size={24} color="#FFF" />
+          <Text style={styles.buttonText}>Take Photo</Text>
+        </TouchableOpacity>
+      </View>
 
-        {/* Features List */}
-        <View style={styles.featuresContainer}>
-          <Text style={styles.featuresTitle}>Features:</Text>
-          <View style={styles.featuresList}>
-            <FeatureItem icon="text" text="Add Text & Fonts" />
-            <FeatureItem icon="brush" text="Draw & Paint" />
-            <FeatureItem icon="color-filter" text="Filters & Effects" />
-            <FeatureItem icon="happy" text="Stickers & Emojis" />
-            <FeatureItem icon="git-compare" text="Warp & Distort" />
-            <FeatureItem icon="crop" text="Crop & Rotate" />
-          </View>
-        </View>
+      {/* Footer */}
+      <View style={styles.footer}>
+        <Text style={styles.footerText}>v1.0 • For modern phones</Text>
       </View>
     </SafeAreaView>
   );
 }
 
-const FeatureItem = ({ icon, text }: { icon: any; text: string }) => (
-  <View style={styles.featureItem}>
-    <Ionicons name={icon} size={20} color="#FF6B6B" />
-    <Text style={styles.featureText}>{text}</Text>
-  </View>
-);
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#1a1a1a',
-  },
-  content: {
-    flex: 1,
-    padding: 24,
-    justifyContent: 'center',
+    backgroundColor: '#34495e',
   },
   header: {
     alignItems: 'center',
-    marginBottom: 48,
+    paddingVertical: 30,
+    backgroundColor: '#2c3e50',
+    borderBottomWidth: 2,
+    borderBottomColor: '#3498db',
   },
-  title: {
-    fontSize: 36,
+  appName: {
+    fontSize: 42,
     fontWeight: 'bold',
-    color: '#FFF',
-    marginTop: 16,
+    color: '#3498db',
+    letterSpacing: 1,
   },
-  subtitle: {
+  tagline: {
     fontSize: 16,
-    color: '#999',
-    marginTop: 8,
+    color: '#95a5a6',
+    marginTop: 4,
   },
-  buttonContainer: {
-    gap: 16,
-    marginBottom: 48,
+  content: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 32,
+  },
+  instruction: {
+    fontSize: 18,
+    color: '#ecf0f1',
+    marginTop: 24,
+    marginBottom: 40,
+    textAlign: 'center',
+  },
+  button: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 16,
+    paddingHorizontal: 32,
+    borderRadius: 8,
+    marginVertical: 8,
+    width: '100%',
+    maxWidth: 300,
+    gap: 12,
   },
   primaryButton: {
-    backgroundColor: '#FF6B6B',
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 20,
-    borderRadius: 16,
-    gap: 12,
-    shadowColor: '#FF6B6B',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
+    backgroundColor: '#3498db',
   },
   secondaryButton: {
-    backgroundColor: '#4ECDC4',
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 20,
-    borderRadius: 16,
-    gap: 12,
-    shadowColor: '#4ECDC4',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
+    backgroundColor: '#27ae60',
   },
   buttonText: {
     color: '#FFF',
     fontSize: 18,
     fontWeight: '600',
   },
-  featuresContainer: {
-    backgroundColor: '#2a2a2a',
-    padding: 20,
-    borderRadius: 16,
-  },
-  featuresTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#FFF',
-    marginBottom: 16,
-  },
-  featuresList: {
-    gap: 12,
-  },
-  featureItem: {
-    flexDirection: 'row',
+  footer: {
+    padding: 16,
     alignItems: 'center',
-    gap: 12,
   },
-  featureText: {
-    fontSize: 16,
-    color: '#CCC',
+  footerText: {
+    fontSize: 12,
+    color: '#95a5a6',
   },
 });

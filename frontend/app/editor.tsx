@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   View,
   StyleSheet,
@@ -10,116 +10,55 @@ import {
   ScrollView,
   Dimensions,
   ActivityIndicator,
+  Image,
 } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import ViewShot from 'react-native-view-shot';
 import * as MediaLibrary from 'expo-media-library';
-import * as FileSystem from 'expo-file-system';
 
-import ImageCanvas from '../components/ImageCanvas';
-import ToolBar from '../components/ToolBar';
-import TextEditor from '../components/TextEditor';
-import DrawingPanel from '../components/DrawingPanel';
-import FilterPanel from '../components/FilterPanel';
-import StickerPanel from '../components/StickerPanel';
-import AdjustmentPanel from '../components/AdjustmentPanel';
-import WarpBrush from '../components/WarpBrush';
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
-
-export type Tool = 
-  | 'none' 
-  | 'text' 
-  | 'draw' 
-  | 'filter' 
-  | 'sticker' 
-  | 'adjust' 
-  | 'warp'
-  | 'crop';
-
-export interface TextElement {
-  id: string;
-  text: string;
-  x: number;
-  y: number;
-  fontSize: number;
-  color: string;
-  fontFamily: string;
-  rotation: number;
-  outlineColor?: string;
-  outlineWidth?: number;
-  shadowColor?: string;
-  shadowOffset?: { x: number; y: number };
-}
-
-export interface DrawPath {
-  id: string;
-  points: Array<{ x: number; y: number }>;
-  color: string;
-  width: number;
-}
-
-export interface StickerElement {
-  id: string;
-  type: string;
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-  rotation: number;
-}
+// Tool categories matching PicSay Pro
+const toolCategories = {
+  basic: [
+    { id: 'crop', icon: 'crop', label: 'Crop' },
+    { id: 'rotate', icon: 'refresh', label: 'Rotate' },
+    { id: 'flip', icon: 'swap-horizontal', label: 'Flip' },
+    { id: 'adjust', icon: 'contrast', label: 'Adjust' },
+  ],
+  effects: [
+    { id: 'filter', icon: 'color-filter', label: 'Filters' },
+    { id: 'blur', icon: 'water', label: 'Blur' },
+    { id: 'sharpen', icon: 'diamond', label: 'Sharpen' },
+    { id: 'redeye', icon: 'eye', label: 'Red-Eye' },
+  ],
+  draw: [
+    { id: 'paint', icon: 'brush', label: 'Paint' },
+    { id: 'text', icon: 'text', label: 'Text' },
+    { id: 'balloon', icon: 'chatbubble', label: 'Balloon' },
+  ],
+  fun: [
+    { id: 'sticker', icon: 'happy', label: 'Stickers' },
+    { id: 'props', icon: 'glasses', label: 'Props' },
+    { id: 'warp', icon: 'git-compare', label: 'Warp' },
+    { id: 'distort', icon: 'prism', label: 'Distort' },
+  ],
+};
 
 export default function EditorScreen() {
   const params = useLocalSearchParams();
   const imageUri = params.imageUri as string;
-  const imageBase64 = params.imageBase64 as string;
-
+  
   const viewShotRef = useRef<ViewShot>(null);
-
-  const [selectedTool, setSelectedTool] = useState<Tool>('none');
-  const [textElements, setTextElements] = useState<TextElement[]>([]);
-  const [drawPaths, setDrawPaths] = useState<DrawPath[]>([]);
-  const [stickers, setStickers] = useState<StickerElement[]>([]);
-  const [currentFilter, setCurrentFilter] = useState<string>('none');
-  const [adjustments, setAdjustments] = useState({
-    brightness: 1,
-    contrast: 1,
-    saturation: 1,
-    hue: 0,
-  });
+  const [selectedCategory, setSelectedCategory] = useState<'basic' | 'effects' | 'draw' | 'fun'>('basic');
+  const [selectedTool, setSelectedTool] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
-  const [history, setHistory] = useState<any[]>([]);
-  const [historyIndex, setHistoryIndex] = useState(-1);
-
-  const addToHistory = useCallback((state: any) => {
-    const newHistory = history.slice(0, historyIndex + 1);
-    newHistory.push(state);
-    setHistory(newHistory);
-    setHistoryIndex(newHistory.length - 1);
-  }, [history, historyIndex]);
-
-  const undo = useCallback(() => {
-    if (historyIndex > 0) {
-      const prevState = history[historyIndex - 1];
-      // Restore state
-      setHistoryIndex(historyIndex - 1);
-    }
-  }, [history, historyIndex]);
-
-  const redo = useCallback(() => {
-    if (historyIndex < history.length - 1) {
-      const nextState = history[historyIndex + 1];
-      // Restore state
-      setHistoryIndex(historyIndex + 1);
-    }
-  }, [history, historyIndex]);
 
   const handleSave = async () => {
     try {
       setIsSaving(true);
 
-      // Request media library permission
       const { status } = await MediaLibrary.requestPermissionsAsync();
       if (status !== 'granted') {
         Alert.alert('Permission Required', 'Please grant media library access to save images');
@@ -127,7 +66,6 @@ export default function EditorScreen() {
         return;
       }
 
-      // Capture the view as image
       if (!viewShotRef.current) {
         Alert.alert('Error', 'Unable to save image');
         setIsSaving(false);
@@ -135,14 +73,12 @@ export default function EditorScreen() {
       }
 
       const uri = await viewShotRef.current.capture();
-      
-      // Save to media library
       const asset = await MediaLibrary.createAssetAsync(uri);
-      await MediaLibrary.createAlbumAsync('PicSay Pro', asset, false);
+      await MediaLibrary.createAlbumAsync('PixelWarp', asset, false);
 
       Alert.alert(
-        'Success',
-        'Image saved to gallery!',
+        'Saved!',
+        'Your photo has been saved to gallery.',
         [
           { text: 'Edit Another', onPress: () => router.back() },
           { text: 'OK', style: 'cancel' }
@@ -156,171 +92,144 @@ export default function EditorScreen() {
     }
   };
 
-  const handleAddText = (newText: TextElement) => {
-    setTextElements([...textElements, newText]);
-    addToHistory({ textElements: [...textElements, newText] });
-  };
-
-  const handleUpdateText = (id: string, updates: Partial<TextElement>) => {
-    setTextElements(prev =>
-      prev.map(item => (item.id === id ? { ...item, ...updates } : item))
+  const handleBack = () => {
+    Alert.alert(
+      'Discard Changes?',
+      'All changes will be lost.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Discard', onPress: () => router.back(), style: 'destructive' },
+      ]
     );
-  };
-
-  const handleDeleteText = (id: string) => {
-    setTextElements(prev => prev.filter(item => item.id !== id));
-  };
-
-  const handleAddDrawPath = (path: DrawPath) => {
-    setDrawPaths([...drawPaths, path]);
-    addToHistory({ drawPaths: [...drawPaths, path] });
-  };
-
-  const handleAddSticker = (sticker: StickerElement) => {
-    setStickers([...stickers, sticker]);
-    addToHistory({ stickers: [...stickers, sticker] });
-  };
-
-  const handleUpdateSticker = (id: string, updates: Partial<StickerElement>) => {
-    setStickers(prev =>
-      prev.map(item => (item.id === id ? { ...item, ...updates } : item))
-    );
-  };
-
-  const handleDeleteSticker = (id: string) => {
-    setStickers(prev => prev.filter(item => item.id !== id));
-  };
-
-  const handleFilterChange = (filter: string) => {
-    setCurrentFilter(filter);
-    addToHistory({ currentFilter: filter });
-  };
-
-  const handleAdjustmentChange = (key: string, value: number) => {
-    setAdjustments(prev => ({ ...prev, [key]: value }));
   };
 
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="light-content" />
+      <StatusBar barStyle="light-content" backgroundColor="#2c3e50" />
       
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.headerButton}
-          onPress={() => {
-            Alert.alert(
-              'Discard Changes?',
-              'Are you sure you want to go back? All changes will be lost.',
-              [
-                { text: 'Cancel', style: 'cancel' },
-                { text: 'Discard', onPress: () => router.back(), style: 'destructive' },
-              ]
-            );
-          }}
-        >
+      {/* Top Bar - PicSay Pro Style */}
+      <View style={styles.topBar}>
+        <TouchableOpacity style={styles.topButton} onPress={handleBack}>
           <Ionicons name="arrow-back" size={24} color="#FFF" />
         </TouchableOpacity>
 
-        <Text style={styles.headerTitle}>Edit Photo</Text>
+        <Text style={styles.title}>PixelWarp</Text>
 
-        <View style={styles.headerRight}>
-          <TouchableOpacity
-            style={styles.headerButton}
-            onPress={undo}
-            disabled={historyIndex <= 0}
-          >
-            <Ionicons
-              name="arrow-undo"
-              size={24}
-              color={historyIndex <= 0 ? '#666' : '#FFF'}
-            />
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.headerButton}
-            onPress={redo}
-            disabled={historyIndex >= history.length - 1}
-          >
-            <Ionicons
-              name="arrow-redo"
-              size={24}
-              color={historyIndex >= history.length - 1 ? '#666' : '#FFF'}
-            />
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.headerButton, styles.saveButton]}
-            onPress={handleSave}
-            disabled={isSaving}
-          >
-            {isSaving ? (
-              <ActivityIndicator size="small" color="#FFF" />
-            ) : (
-              <Ionicons name="checkmark" size={24} color="#FFF" />
-            )}
-          </TouchableOpacity>
-        </View>
+        <TouchableOpacity
+          style={[styles.topButton, styles.saveButton]}
+          onPress={handleSave}
+          disabled={isSaving}
+        >
+          {isSaving ? (
+            <ActivityIndicator size="small" color="#FFF" />
+          ) : (
+            <Ionicons name="checkmark" size={28} color="#FFF" />
+          )}
+        </TouchableOpacity>
       </View>
 
-      {/* Canvas Area */}
+      {/* Image Canvas */}
       <View style={styles.canvasContainer}>
         <ViewShot
           ref={viewShotRef}
           options={{ format: 'jpg', quality: 1.0 }}
           style={styles.viewShot}
         >
-          <ImageCanvas
-            imageUri={imageUri}
-            textElements={textElements}
-            drawPaths={drawPaths}
-            stickers={stickers}
-            filter={currentFilter}
-            adjustments={adjustments}
-            onUpdateText={handleUpdateText}
-            onDeleteText={handleDeleteText}
-            onUpdateSticker={handleUpdateSticker}
-            onDeleteSticker={handleDeleteSticker}
-            isWarpMode={selectedTool === 'warp'}
+          <Image
+            source={{ uri: imageUri }}
+            style={styles.image}
+            resizeMode="contain"
           />
         </ViewShot>
       </View>
 
-      {/* Tool Panels */}
-      {selectedTool === 'text' && (
-        <TextEditor onAddText={handleAddText} onClose={() => setSelectedTool('none')} />
-      )}
-      
-      {selectedTool === 'draw' && (
-        <DrawingPanel onAddPath={handleAddDrawPath} onClose={() => setSelectedTool('none')} />
-      )}
-      
-      {selectedTool === 'filter' && (
-        <FilterPanel
-          currentFilter={currentFilter}
-          onFilterChange={handleFilterChange}
-          onClose={() => setSelectedTool('none')}
-        />
-      )}
-      
-      {selectedTool === 'sticker' && (
-        <StickerPanel onAddSticker={handleAddSticker} onClose={() => setSelectedTool('none')} />
-      )}
-      
-      {selectedTool === 'adjust' && (
-        <AdjustmentPanel
-          adjustments={adjustments}
-          onAdjustmentChange={handleAdjustmentChange}
-          onClose={() => setSelectedTool('none')}
-        />
-      )}
-      
-      {selectedTool === 'warp' && (
-        <WarpBrush onClose={() => setSelectedTool('none')} />
-      )}
+      {/* Category Tabs - PicSay Pro Style */}
+      <View style={styles.categoryTabs}>
+        <TouchableOpacity
+          style={[styles.categoryTab, selectedCategory === 'basic' && styles.categoryTabActive]}
+          onPress={() => setSelectedCategory('basic')}
+        >
+          <Ionicons name="hammer" size={20} color={selectedCategory === 'basic' ? '#3498db' : '#95a5a6'} />
+          <Text style={[styles.categoryLabel, selectedCategory === 'basic' && styles.categoryLabelActive]}>
+            Basic
+          </Text>
+        </TouchableOpacity>
 
-      {/* Bottom Toolbar */}
-      <ToolBar selectedTool={selectedTool} onSelectTool={setSelectedTool} />
+        <TouchableOpacity
+          style={[styles.categoryTab, selectedCategory === 'effects' && styles.categoryTabActive]}
+          onPress={() => setSelectedCategory('effects')}
+        >
+          <Ionicons name="color-wand" size={20} color={selectedCategory === 'effects' ? '#3498db' : '#95a5a6'} />
+          <Text style={[styles.categoryLabel, selectedCategory === 'effects' && styles.categoryLabelActive]}>
+            Effects
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.categoryTab, selectedCategory === 'draw' && styles.categoryTabActive]}
+          onPress={() => setSelectedCategory('draw')}
+        >
+          <Ionicons name="create" size={20} color={selectedCategory === 'draw' ? '#3498db' : '#95a5a6'} />
+          <Text style={[styles.categoryLabel, selectedCategory === 'draw' && styles.categoryLabelActive]}>
+            Draw
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.categoryTab, selectedCategory === 'fun' && styles.categoryTabActive]}
+          onPress={() => setSelectedCategory('fun')}
+        >
+          <Ionicons name="happy" size={20} color={selectedCategory === 'fun' ? '#3498db' : '#95a5a6'} />
+          <Text style={[styles.categoryLabel, selectedCategory === 'fun' && styles.categoryLabelActive]}>
+            Fun
+          </Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* Tool Icons - PicSay Pro Style */}
+      <View style={styles.toolBar}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.toolList}
+        >
+          {toolCategories[selectedCategory].map((tool) => (
+            <TouchableOpacity
+              key={tool.id}
+              style={[
+                styles.toolButton,
+                selectedTool === tool.id && styles.toolButtonActive,
+              ]}
+              onPress={() => setSelectedTool(tool.id)}
+            >
+              <View style={styles.toolIcon}>
+                <Ionicons
+                  name={tool.icon as any}
+                  size={28}
+                  color={selectedTool === tool.id ? '#3498db' : '#ecf0f1'}
+                />
+              </View>
+              <Text
+                style={[
+                  styles.toolLabel,
+                  selectedTool === tool.id && styles.toolLabelActive,
+                ]}
+              >
+                {tool.label}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+      </View>
+
+      {/* Info Message */}
+      {selectedTool && (
+        <View style={styles.infoBar}>
+          <Text style={styles.infoText}>
+            Tool panels coming soon! This is the PicSay Pro interface layout.
+          </Text>
+        </View>
+      )}
     </SafeAreaView>
   );
 }
@@ -328,43 +237,116 @@ export default function EditorScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#000',
+    backgroundColor: '#34495e',
   },
-  header: {
+  topBar: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: '#1a1a1a',
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    backgroundColor: '#2c3e50',
     borderBottomWidth: 1,
-    borderBottomColor: '#333',
+    borderBottomColor: '#3498db',
   },
-  headerButton: {
+  topButton: {
     padding: 8,
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#FFF',
-  },
-  headerRight: {
-    flexDirection: 'row',
-    gap: 8,
+    minWidth: 48,
   },
   saveButton: {
-    backgroundColor: '#FF6B6B',
-    borderRadius: 8,
+    backgroundColor: '#27ae60',
+    borderRadius: 6,
     paddingHorizontal: 12,
+  },
+  title: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#3498db',
   },
   canvasContainer: {
     flex: 1,
-    backgroundColor: '#000',
+    backgroundColor: '#2c3e50',
     justifyContent: 'center',
     alignItems: 'center',
   },
   viewShot: {
     width: SCREEN_WIDTH,
-    aspectRatio: 1,
+    height: SCREEN_WIDTH,
+  },
+  image: {
+    width: '100%',
+    height: '100%',
+  },
+  categoryTabs: {
+    flexDirection: 'row',
+    backgroundColor: '#2c3e50',
+    borderTopWidth: 1,
+    borderTopColor: '#34495e',
+  },
+  categoryTab: {
+    flex: 1,
+    alignItems: 'center',
+    paddingVertical: 10,
+    borderBottomWidth: 2,
+    borderBottomColor: 'transparent',
+  },
+  categoryTabActive: {
+    borderBottomColor: '#3498db',
+  },
+  categoryLabel: {
+    fontSize: 11,
+    color: '#95a5a6',
+    marginTop: 4,
+  },
+  categoryLabelActive: {
+    color: '#3498db',
+    fontWeight: '600',
+  },
+  toolBar: {
+    backgroundColor: '#34495e',
+    paddingVertical: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#2c3e50',
+  },
+  toolList: {
+    paddingHorizontal: 8,
+    gap: 12,
+  },
+  toolButton: {
+    alignItems: 'center',
+    minWidth: 70,
+  },
+  toolButtonActive: {
+    opacity: 1,
+  },
+  toolIcon: {
+    width: 56,
+    height: 56,
+    borderRadius: 8,
+    backgroundColor: '#2c3e50',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#34495e',
+  },
+  toolLabel: {
+    fontSize: 11,
+    color: '#95a5a6',
+    marginTop: 6,
+    textAlign: 'center',
+  },
+  toolLabelActive: {
+    color: '#3498db',
+    fontWeight: '600',
+  },
+  infoBar: {
+    backgroundColor: '#3498db',
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+  },
+  infoText: {
+    fontSize: 12,
+    color: '#FFF',
+    textAlign: 'center',
   },
 });
