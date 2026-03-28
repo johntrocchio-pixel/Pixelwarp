@@ -2,7 +2,6 @@ import React, { useState, useRef } from 'react';
 import {
   View,
   StyleSheet,
-  SafeAreaView,
   StatusBar,
   Alert,
   TouchableOpacity,
@@ -16,8 +15,9 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import ViewShot from 'react-native-view-shot';
 import * as MediaLibrary from 'expo-media-library';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
-// Import tool components
+// Import ALL tool components
 import AdjustTool from '../components/tools/AdjustTool';
 import FilterTool from '../components/tools/FilterTool';
 import TextTool from '../components/tools/TextTool';
@@ -27,10 +27,14 @@ import BalloonTool from '../components/tools/BalloonTool';
 import WarpTool from '../components/tools/WarpTool';
 import PropsTool from '../components/tools/PropsTool';
 import CropTool from '../components/tools/CropTool';
+import RotateTool from '../components/tools/RotateTool';
+import FlipTool from '../components/tools/FlipTool';
+import BlurTool from '../components/tools/BlurTool';
+import SharpenTool from '../components/tools/SharpenTool';
+import CanvasOverlay from '../components/CanvasOverlay';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
-// Tool categories matching PicSay Pro
 const toolCategories = {
   basic: [
     { id: 'crop', icon: 'crop', label: 'Crop' },
@@ -69,13 +73,26 @@ export default function EditorScreen() {
   const [isSaving, setIsSaving] = useState(false);
   const [imageScale, setImageScale] = useState(1);
 
-  // State for all edits
+  // Image manipulation state
+  const [rotation, setRotation] = useState(0);
+  const [flipHorizontal, setFlipHorizontal] = useState(false);
+  const [flipVertical, setFlipVertical] = useState(false);
   const [currentFilter, setCurrentFilter] = useState('none');
+  const [blurIntensity, setBlurIntensity] = useState(0);
+  const [sharpenIntensity, setSharpenIntensity] = useState(0);
+  
+  // Adjustments state
   const [adjustments, setAdjustments] = useState({
     brightness: 1,
     contrast: 1,
     saturation: 1,
   });
+
+  // Canvas elements state
+  const [textElements, setTextElements] = useState<any[]>([]);
+  const [stickers, setStickers] = useState<any[]>([]);
+  const [balloons, setBalloons] = useState<any[]>([]);
+  const [props, setProps] = useState<any[]>([]);
 
   const handleSave = async () => {
     try {
@@ -139,39 +156,140 @@ export default function EditorScreen() {
     setImageScale(1);
   };
 
+  // Tool handlers
+  const handleRotate = (degrees: number) => {
+    setRotation(degrees);
+  };
+
+  const handleFlip = (direction: 'horizontal' | 'vertical') => {
+    if (direction === 'horizontal') {
+      setFlipHorizontal(!flipHorizontal);
+    } else {
+      setFlipVertical(!flipVertical);
+    }
+  };
+
+  const handleAddText = (textData: any) => {
+    setTextElements([...textElements, textData]);
+  };
+
+  const handleUpdateText = (id: string, updates: any) => {
+    setTextElements(prev =>
+      prev.map(item => (item.id === id ? { ...item, ...updates } : item))
+    );
+  };
+
+  const handleDeleteText = (id: string) => {
+    setTextElements(prev => prev.filter(item => item.id !== id));
+  };
+
+  const handleAddSticker = (emoji: string) => {
+    const newSticker = {
+      id: Date.now().toString(),
+      type: emoji,
+      x: 150,
+      y: 150,
+      width: 80,
+      height: 80,
+      rotation: 0,
+    };
+    setStickers([...stickers, newSticker]);
+  };
+
+  const handleUpdateSticker = (id: string, updates: any) => {
+    setStickers(prev =>
+      prev.map(item => (item.id === id ? { ...item, ...updates } : item))
+    );
+  };
+
+  const handleDeleteSticker = (id: string) => {
+    setStickers(prev => prev.filter(item => item.id !== id));
+  };
+
+  const handleAddBalloon = (balloonData: any) => {
+    setBalloons([...balloons, balloonData]);
+  };
+
+  const handleAddProp = (emoji: string) => {
+    const newProp = {
+      id: Date.now().toString(),
+      type: emoji,
+      x: 150,
+      y: 100,
+      width: 100,
+      height: 100,
+      rotation: 0,
+    };
+    setProps([...props, newProp]);
+  };
+
   const getImageStyle = () => {
+    const transform: any[] = [];
+    
+    // Apply rotation
+    if (rotation !== 0) {
+      transform.push(`rotate(${rotation}deg)`);
+    }
+    
+    // Apply flips
+    const scaleX = flipHorizontal ? -1 : 1;
+    const scaleY = flipVertical ? -1 : 1;
+    if (scaleX !== 1 || scaleY !== 1) {
+      transform.push(`scaleX(${scaleX}) scaleY(${scaleY})`);
+    }
+
     const styles: any = { 
       width: SCREEN_WIDTH * imageScale, 
-      height: SCREEN_WIDTH * imageScale 
+      height: SCREEN_WIDTH * imageScale,
     };
-    
-    // Apply filter
-    if (currentFilter !== 'none') {
-      const filters = [];
-      if (currentFilter === 'grayscale') filters.push('grayscale(1)');
-      if (currentFilter === 'sepia') filters.push('sepia(1)');
-      if (currentFilter === 'invert') filters.push('invert(1)');
-      if (currentFilter === 'blur') filters.push('blur(5px)');
-      
-      if (filters.length > 0) {
-        styles.filter = filters.join(' ');
-      }
+
+    if (transform.length > 0) {
+      styles.transform = transform.join(' ');
     }
     
-    // Apply adjustments
-    const adjustFilters = [];
+    // Apply filters
+    const filters = [];
+    
+    // Named filters
+    if (currentFilter === 'grayscale') filters.push('grayscale(1)');
+    if (currentFilter === 'sepia') filters.push('sepia(1)');
+    if (currentFilter === 'invert') filters.push('invert(1)');
+    if (currentFilter === 'vintage') {
+      filters.push('sepia(0.5)');
+      filters.push('contrast(1.2)');
+    }
+    if (currentFilter === 'warm') {
+      filters.push('sepia(0.3)');
+      filters.push('saturate(1.3)');
+    }
+    if (currentFilter === 'cool') {
+      filters.push('hue-rotate(180deg)');
+      filters.push('saturate(1.2)');
+    }
+    
+    // Blur
+    if (blurIntensity > 0) {
+      filters.push(`blur(${blurIntensity}px)`);
+    }
+    
+    // Adjustments
     if (adjustments.brightness !== 1) {
-      adjustFilters.push(`brightness(${adjustments.brightness})`);
+      filters.push(`brightness(${adjustments.brightness})`);
     }
     if (adjustments.contrast !== 1) {
-      adjustFilters.push(`contrast(${adjustments.contrast})`);
+      filters.push(`contrast(${adjustments.contrast})`);
     }
     if (adjustments.saturation !== 1) {
-      adjustFilters.push(`saturate(${adjustments.saturation})`);
+      filters.push(`saturate(${adjustments.saturation})`);
     }
     
-    if (adjustFilters.length > 0) {
-      styles.filter = (styles.filter || '') + ' ' + adjustFilters.join(' ');
+    // Sharpen (approximated with contrast)
+    if (sharpenIntensity > 0) {
+      filters.push(`contrast(${1 + sharpenIntensity})`);
+    }
+    
+    if (filters.length > 0) {
+      styles.filter = filters.join(' ');
     }
     
     return styles;
@@ -184,29 +302,53 @@ export default function EditorScreen() {
       case 'filter':
         return <FilterTool currentFilter={currentFilter} onFilterChange={setCurrentFilter} />;
       case 'text':
-        return <TextTool onAddText={(data) => console.log('Add text:', data)} />;
+        return <TextTool onAddText={handleAddText} />;
       case 'paint':
         return <PaintTool onPaintSettingsChange={(data) => console.log('Paint settings:', data)} />;
       case 'sticker':
-        return <StickerTool onAddSticker={(sticker) => console.log('Add sticker:', sticker)} />;
+        return <StickerTool onAddSticker={handleAddSticker} />;
       case 'balloon':
-        return <BalloonTool onAddBalloon={(data) => console.log('Add balloon:', data)} />;
+        return <BalloonTool onAddBalloon={handleAddBalloon} />;
       case 'warp':
         return <WarpTool onWarpSettingsChange={(data) => console.log('Warp settings:', data)} />;
       case 'props':
-        return <PropsTool onAddProp={(prop) => console.log('Add prop:', prop)} />;
+        return <PropsTool onAddProp={handleAddProp} />;
       case 'crop':
         return <CropTool onCrop={(data) => console.log('Crop:', data)} />;
+      case 'rotate':
+        return <RotateTool onRotate={handleRotate} />;
+      case 'flip':
+        return <FlipTool onFlip={handleFlip} />;
+      case 'blur':
+        return <BlurTool onBlurChange={setBlurIntensity} />;
+      case 'sharpen':
+        return <SharpenTool onSharpenChange={setSharpenIntensity} />;
+      case 'redeye':
+        return (
+          <View style={{ padding: 16, backgroundColor: '#111' }}>
+            <Text style={{ color: '#FFF', textAlign: 'center' }}>
+              Tap on red eyes in the image to remove them
+            </Text>
+          </View>
+        );
+      case 'distort':
+        return (
+          <View style={{ padding: 16, backgroundColor: '#111' }}>
+            <Text style={{ color: '#FFF', textAlign: 'center' }}>
+              Distort effects coming soon
+            </Text>
+          </View>
+        );
       default:
         return null;
     }
   };
 
   return (
-    <View style={styles.container}>
+    <GestureHandlerRootView style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor="#000" />
       
-      {/* FIXED Top Bar - Floating */}
+      {/* FIXED Top Bar */}
       <View style={styles.topBar}>
         <TouchableOpacity style={styles.topButton} onPress={handleBack}>
           <Ionicons name="arrow-back" size={24} color="#FFF" />
@@ -250,7 +392,7 @@ export default function EditorScreen() {
         </View>
       </View>
 
-      {/* FULL SCREEN Canvas - Behind Everything */}
+      {/* FULL SCREEN Canvas */}
       <ScrollView
         ref={scrollViewRef}
         style={styles.canvasScrollView}
@@ -265,17 +407,32 @@ export default function EditorScreen() {
           options={{ format: 'jpg', quality: 1.0 }}
           style={styles.viewShot}
         >
-          <Image
-            source={{ uri: imageUri }}
-            style={getImageStyle()}
-            resizeMode="contain"
-          />
+          <View style={{ position: 'relative' }}>
+            <Image
+              source={{ uri: imageUri }}
+              style={getImageStyle()}
+              resizeMode="contain"
+            />
+            
+            {/* Canvas Overlay with draggable elements */}
+            <CanvasOverlay
+              textElements={textElements}
+              stickers={stickers}
+              balloons={balloons}
+              props={props}
+              onUpdateText={handleUpdateText}
+              onDeleteText={handleDeleteText}
+              onUpdateSticker={handleUpdateSticker}
+              onDeleteSticker={handleDeleteSticker}
+              imageScale={imageScale}
+            />
+          </View>
         </ViewShot>
       </ScrollView>
 
-      {/* FLOATING Bottom UI - ABSOLUTE POSITION - Always on Top */}
+      {/* FLOATING Bottom UI */}
       <View style={styles.floatingBottomContainer}>
-        {/* Tool Panel - Floats above everything */}
+        {/* Tool Panel */}
         {selectedTool && (
           <View style={styles.toolPanelContainer}>
             <View style={styles.toolPanelHeader}>
@@ -290,62 +447,30 @@ export default function EditorScreen() {
           </View>
         )}
 
-        {/* Category Tabs - Floating */}
+        {/* Category Tabs */}
         <View style={styles.categoryTabs}>
-          <TouchableOpacity
-            style={[styles.categoryTab, selectedCategory === 'basic' && styles.categoryTabActive]}
-            onPress={() => {
-              setSelectedCategory('basic');
-              setSelectedTool(null);
-            }}
-          >
-            <Ionicons name="hammer" size={18} color={selectedCategory === 'basic' ? '#00D9FF' : '#666'} />
-            <Text style={[styles.categoryLabel, selectedCategory === 'basic' && styles.categoryLabelActive]}>
-              Basic
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.categoryTab, selectedCategory === 'effects' && styles.categoryTabActive]}
-            onPress={() => {
-              setSelectedCategory('effects');
-              setSelectedTool(null);
-            }}
-          >
-            <Ionicons name="color-wand" size={18} color={selectedCategory === 'effects' ? '#00D9FF' : '#666'} />
-            <Text style={[styles.categoryLabel, selectedCategory === 'effects' && styles.categoryLabelActive]}>
-              Effects
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.categoryTab, selectedCategory === 'draw' && styles.categoryTabActive]}
-            onPress={() => {
-              setSelectedCategory('draw');
-              setSelectedTool(null);
-            }}
-          >
-            <Ionicons name="create" size={18} color={selectedCategory === 'draw' ? '#00D9FF' : '#666'} />
-            <Text style={[styles.categoryLabel, selectedCategory === 'draw' && styles.categoryLabelActive]}>
-              Draw
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.categoryTab, selectedCategory === 'fun' && styles.categoryTabActive]}
-            onPress={() => {
-              setSelectedCategory('fun');
-              setSelectedTool(null);
-            }}
-          >
-            <Ionicons name="happy" size={18} color={selectedCategory === 'fun' ? '#00D9FF' : '#666'} />
-            <Text style={[styles.categoryLabel, selectedCategory === 'fun' && styles.categoryLabelActive]}>
-              Fun
-            </Text>
-          </TouchableOpacity>
+          {(['basic', 'effects', 'draw', 'fun'] as const).map((category) => (
+            <TouchableOpacity
+              key={category}
+              style={[styles.categoryTab, selectedCategory === category && styles.categoryTabActive]}
+              onPress={() => {
+                setSelectedCategory(category);
+                setSelectedTool(null);
+              }}
+            >
+              <Ionicons 
+                name={category === 'basic' ? 'hammer' : category === 'effects' ? 'color-wand' : category === 'draw' ? 'create' : 'happy'} 
+                size={18} 
+                color={selectedCategory === category ? '#00D9FF' : '#666'} 
+              />
+              <Text style={[styles.categoryLabel, selectedCategory === category && styles.categoryLabelActive]}>
+                {category.charAt(0).toUpperCase() + category.slice(1)}
+              </Text>
+            </TouchableOpacity>
+          ))}
         </View>
 
-        {/* Tool Icons - Floating */}
+        {/* Tool Icons */}
         <View style={styles.toolBar}>
           <ScrollView
             horizontal
@@ -384,7 +509,7 @@ export default function EditorScreen() {
           </ScrollView>
         </View>
       </View>
-    </View>
+    </GestureHandlerRootView>
   );
 }
 
@@ -403,7 +528,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 12,
-    paddingTop: 50, // Safe area top
+    paddingTop: 50,
     paddingBottom: 10,
     backgroundColor: 'rgba(17, 17, 17, 0.95)',
     borderBottomWidth: 1,
@@ -448,8 +573,8 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingTop: 100, // Space for top bar
-    paddingBottom: 280, // Space for bottom tools
+    paddingTop: 100,
+    paddingBottom: 280,
     padding: 10,
   },
   viewShot: {
@@ -464,7 +589,7 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: '#222',
     zIndex: 100,
-    paddingBottom: 30, // Safe area bottom
+    paddingBottom: 30,
   },
   toolPanelContainer: {
     maxHeight: SCREEN_HEIGHT * 0.35,
