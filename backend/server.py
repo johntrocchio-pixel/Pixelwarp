@@ -66,7 +66,7 @@ async def create_status_check(input: StatusCheckCreate):
 
 @api_router.get("/status", response_model=List[StatusCheck])
 async def get_status_checks():
-    status_checks = await db.status_checks.find().to_list(1000)
+    status_checks = await db.status_checks.find({}, {'_id': 1, 'client_name': 1, 'timestamp': 1}).to_list(1000)
     return [StatusCheck(**status_check) for status_check in status_checks]
 
 @api_router.post("/apply-filter")
@@ -159,9 +159,13 @@ async def save_project(project: ImageProject):
 
 @api_router.get("/projects")
 async def get_projects():
-    """Get all saved projects"""
+    """Get all saved projects (metadata only, excludes large image data)"""
     try:
-        projects = await db.projects.find().sort("timestamp", -1).to_list(100)
+        # Exclude large base64 image fields for better performance
+        projects = await db.projects.find(
+            {},
+            {'original_image': 0, 'edited_image': 0}
+        ).sort("timestamp", -1).to_list(100)
         return {
             "success": True,
             "projects": projects
