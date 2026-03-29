@@ -35,35 +35,26 @@ A comprehensive photo editing application built with Expo/React Native that repl
 
 1. **Clone and navigate to project**
 ```bash
-cd /app
+git clone https://github.com/johntrocchio-pixel /Pixelwarp.git
 ```
 
 2. **Install Frontend Dependencies**
 ```bash
-cd frontend
-yarn install
+cd Pixelwarp/frontend
 ```
 
 3. **Install Backend Dependencies**
 ```bash
-cd ../backend
-pip install -r requirements.txt
+npm install
 ```
 
 4. **Start Services**
 ```bash
-# Start backend
-cd /app/backend
-python server.py
-
-# Start frontend (in new terminal)
-cd /app/frontend
-expo start
+npx expo start
 ```
 
 5. **Access the App**
-- Web: https://photo-markup-app.preview.emergentagent.com
-- Mobile: Scan QR code with Expo Go app
+npx eas-cli@latest build --platform android
 
 ## 📐 Architecture
 
